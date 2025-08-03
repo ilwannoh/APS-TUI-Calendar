@@ -1,0 +1,50 @@
+[
+  {
+    "timestamp": "2025-08-03T16:18:27.688534",
+    "test": "API Health Check",
+    "result": "PASS",
+    "details": "Status: 200, Response: {'message': 'APS Scheduling API', 'version': '1.0.0'}"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:29.736335",
+    "test": "Equipment API",
+    "result": "PASS",
+    "details": "Returned 8 equipment items"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:31.793524",
+    "test": "Products API",
+    "result": "PASS",
+    "details": "Returned 8 product items"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:33.853035",
+    "test": "Schedule Generation",
+    "result": "PASS",
+    "details": "Created 16 batches"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:35.904888",
+    "test": "Schedule Retrieval",
+    "result": "PASS",
+    "details": "Retrieved 16 batches"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:35.904920",
+    "test": "Schedule Time Order",
+    "result": "PASS",
+    "details": "Batches are in chronological order"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:35.904963",
+    "test": "Equipment Overlap Check",
+    "result": "PASS",
+    "details": "No equipment scheduling conflicts"
+  },
+  {
+    "timestamp": "2025-08-03T16:18:35.905478",
+    "test": "Log Files Check",
+    "result": "FAIL",
+    "details": "Log directory not found"
+  }
+]

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APS 생산계획 스케줄러</title>
+    
+    <!-- TUI Calendar CSS -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <h1><i class="fas fa-industry"></i> APS 생산계획 스케줄러</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" onclick="showUploadModal()">
+                <i class="fas fa-upload"></i> 판매계획 업로드
+            </button>
+            <button class="btn btn-success" onclick="generateSchedule()">
+                <i class="fas fa-cogs"></i> 스케줄 생성
+            </button>
+            <button class="btn btn-secondary" onclick="exportSchedule()">
+                <i class="fas fa-download"></i> 내보내기
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3>보기 옵션</h3>
+                <div class="view-selector">
+                    <button class="view-btn active" data-view="month">월간</button>
+                    <button class="view-btn" data-view="week">주간</button>
+                    <button class="view-btn" data-view="day">일간</button>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>장비 필터</h3>
+                <div class="equipment-filters">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="all-equipment" checked>
+                        <span>전체 선택</span>
+                    </label>
+                    <div id="equipment-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>제품 필터</h3>
+                <div class="product-filters">
+                    <input type="text" id="product-search" placeholder="제품명 검색...">
+                    <div id="product-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>범례</h3>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #FF6B6B"></span>
+                        <span>기넥신에프정 40mg</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #4ECDC4"></span>
+                        <span>기넥신에프정 80mg</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #45B7D1"></span>
+                        <span>리넥신정</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #FECA57"></span>
+                        <span>조인스정</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Calendar Container -->
+        <main class="calendar-container">
+            <div class="calendar-toolbar">
+                <div class="toolbar-left">
+                    <button class="btn-icon" onclick="calendar.prev()">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="btn-text" onclick="calendar.today()">오늘</button>
+                    <button class="btn-icon" onclick="calendar.next()">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <span class="current-range"></span>
+                </div>
+                <div class="toolbar-right">
+                    <span class="schedule-stats">
+                        총 <span id="total-batches">0</span>개 배치 | 
+                        <span id="total-products">0</span>개 제품
+                    </span>
+                </div>
+            </div>
+            <div id="calendar"></div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>판매계획 업로드</h2>
+                <button class="close" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Excel 파일을 드래그하거나 클릭하여 선택</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
+                </div>
+                <div class="file-info" id="fileInfo" style="display:none;">
+                    <i class="fas fa-file-excel"></i>
+                    <span id="fileName"></span>
+                    <button class="btn-remove" onclick="removeFile()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeUploadModal()">취소</button>
+                <button class="btn btn-primary" onclick="uploadFile()">업로드</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Detail Popup -->
+    <div id="eventPopup" class="event-popup" style="display:none;">
+        <div class="popup-header">
+            <h3 id="popupTitle"></h3>
+            <button class="close" onclick="closeEventPopup()">&times;</button>
+        </div>
+        <div class="popup-body">
+            <div class="popup-row">
+                <label>제품:</label>
+                <span id="popupProduct"></span>
+            </div>
+            <div class="popup-row">
+                <label>공정:</label>
+                <span id="popupProcess"></span>
+            </div>
+            <div class="popup-row">
+                <label>장비:</label>
+                <span id="popupEquipment"></span>
+            </div>
+            <div class="popup-row">
+                <label>시작:</label>
+                <span id="popupStart"></span>
+            </div>
+            <div class="popup-row">
+                <label>종료:</label>
+                <span id="popupEnd"></span>
+            </div>
+            <div class="popup-row">
+                <label>Lot No:</label>
+                <span id="popupLot"></span>
+            </div>
+        </div>
+        <div class="popup-footer">
+            <button class="btn btn-danger" onclick="deleteEvent()">
+                <i class="fas fa-trash"></i> 삭제
+            </button>
+            <button class="btn btn-primary" onclick="editEvent()">
+                <i class="fas fa-edit"></i> 수정
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+        <div class="spinner"></div>
+        <p>처리 중...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

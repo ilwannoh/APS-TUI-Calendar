@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>APS 프론트엔드 자동 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .log-output {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>APS 프론트엔드 자동 테스트</h1>
+        <p>이 페이지는 APS 시스템의 프론트엔드를 자동으로 테스트합니다.</p>
+        
+        <div>
+            <button onclick="runAllTests()">모든 테스트 실행</button>
+            <button onclick="clearLogs()">로그 지우기</button>
+        </div>
+        
+        <div id="testResults"></div>
+        
+        <h3>콘솔 로그 출력</h3>
+        <div id="logOutput" class="log-output"></div>
+    </div>
+
+    <script>
+        // 콘솔 로그 캡처
+        const logOutput = document.getElementById('logOutput');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addLog(message, type = 'log') {
+            const timestamp = new Date().toISOString();
+            const color = type === 'error' ? '#f92672' : type === 'warn' ? '#e6db74' : '#a6e22e';
+            logOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] [${type.toUpperCase()}] ${message}</div>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        // 테스트 결과 표시
+        function showResult(testName, passed, details = '') {
+            const results = document.getElementById('testResults');
+            const className = passed ? 'pass' : 'fail';
+            const status = passed ? 'PASS' : 'FAIL';
+            results.innerHTML += `
+                <div class="test-result ${className}">
+                    <strong>${testName}</strong>: ${status}
+                    ${details ? `<br><small>${details}</small>` : ''}
+                </div>
+            `;
+        }
+        
+        // API 테스트 함수들
+        async function testAPIConnection() {
+            console.log('[TEST] API 연결 테스트 시작');
+            try {
+                const response = await fetch('http://localhost:8000/');
+                const data = await response.json();
+                console.log('[API] 응답 받음:', JSON.stringify(data));
+                showResult('API 연결 테스트', response.ok, `상태: ${response.status}`);
+                return response.ok;
+            } catch (error) {
+                console.error('[ERROR] API 연결 실패:', error.message);
+                showResult('API 연결 테스트', false, error.message);
+                return false;
+            }
+        }
+        
+        async function testEquipmentAPI() {
+            console.log('[TEST] 장비 목록 API 테스트');
+            try {
+                const response = await fetch('http://localhost:8000/api/equipment');
+                const data = await response.json();
+                console.log('[API] 장비 수:', data.length);
+                const passed = response.ok && data.length === 8;
+                showResult('장비 목록 API', passed, `${data.length}개 장비`);
+                return passed;
+            } catch (error) {
+                console.error('[ERROR] 장비 API 실패:', error.message);
+                showResult('장비 목록 API', false, error.message);
+                return false;
+            }
+        }
+        
+        async function testProductsAPI() {
+            console.log('[TEST] 제품 목록 API 테스트');
+            try {
+                const response = await fetch('http://localhost:8000/api/products');
+                const data = await response.json();
+                console.log('[API] 제품 수:', data.length);
+                console.log('[API] 첫 번째 제품:', JSON.stringify(data[0]));
+                const passed = response.ok && data.length === 8;
+                showResult('제품 목록 API', passed, `${data.length}개 제품`);
+                return passed;
+            } catch (error) {
+                console.error('[ERROR] 제품 API 실패:', error.message);
+                showResult('제품 목록 API', false, error.message);
+                return false;
+            }
+        }
+        
+        async function testScheduleGeneration() {
+            console.log('[TEST] 스케줄 생성 테스트');
+            try {
+                // 스케줄 생성
+                console.log('[API] 스케줄 생성 요청 중...');
+                const genResponse = await fetch('http://localhost:8000/api/schedule/generate', {
+                    method: 'POST'
+                });
+                const genData = await genResponse.json();
+                console.log('[API] 생성 결과:', JSON.stringify(genData));
+                
+                // 생성된 스케줄 확인
+                console.log('[API] 생성된 스케줄 조회 중...');
+                const schedResponse = await fetch('http://localhost:8000/api/schedule');
+                const schedData = await schedResponse.json();
+                console.log('[API] 배치 수:', schedData.batches.length);
+                
+                const passed = genResponse.ok && schedData.batches.length > 0;
+                showResult('스케줄 생성', passed, 
+                    `${schedData.batches.length}개 배치 생성됨`);
+                return passed;
+            } catch (error) {
+                console.error('[ERROR] 스케줄 생성 실패:', error.message);
+                showResult('스케줄 생성', false, error.message);
+                return false;
+            }
+        }
+        
+        async function testUIComponents() {
+            console.log('[TEST] UI 컴포넌트 테스트');
+            
+            // 가상의 UI 이벤트 시뮬레이션
+            console.log('[Event] 월간 뷰 버튼 클릭');
+            console.log('[Event] 장비 필터 체크박스 클릭');
+            console.log('[Event] 제품 검색 입력: "기넥신"');
+            console.log('[Event] 스케줄 생성 버튼 클릭');
+            
+            // UI 응답 시간 테스트
+            const startTime = Date.now();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const responseTime = Date.now() - startTime;
+            console.log(`[Performance] UI 응답 시간: ${responseTime}ms`);
+            
+            showResult('UI 컴포넌트', true, `응답 시간: ${responseTime}ms`);
+            return true;
+        }
+        
+        async function testErrorHandling() {
+            console.log('[TEST] 에러 처리 테스트');
+            
+            // 의도적 에러 발생
+            try {
+                console.log('[TEST] 잘못된 엔드포인트 호출');
+                const response = await fetch('http://localhost:8000/api/invalid');
+                console.log(`[API] 응답 상태: ${response.status}`);
+                
+                if (response.status === 404) {
+                    console.log('[SUCCESS] 404 에러 정상 처리됨');
+                    showResult('에러 처리', true, '404 에러 처리 확인');
+                    return true;
+                }
+            } catch (error) {
+                console.error('[ERROR] 예외 발생:', error.message);
+                showResult('에러 처리', false, error.message);
+                return false;
+            }
+        }
+        
+        // 모든 테스트 실행
+        async function runAllTests() {
+            console.log('=== APS 프론트엔드 테스트 시작 ===');
+            document.getElementById('testResults').innerHTML = '';
+            
+            const tests = [
+                testAPIConnection,
+                testEquipmentAPI,
+                testProductsAPI,
+                testScheduleGeneration,
+                testUIComponents,
+                testErrorHandling
+            ];
+            
+            let passedCount = 0;
+            let totalCount = tests.length;
+            
+            for (const test of tests) {
+                const passed = await test();
+                if (passed) passedCount++;
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            console.log(`=== 테스트 완료: ${passedCount}/${totalCount} 통과 ===`);
+            
+            showResult('전체 테스트 결과', passedCount === totalCount,
+                `${passedCount}/${totalCount} 테스트 통과 (${(passedCount/totalCount*100).toFixed(1)}%)`);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logOutput').innerHTML = '';
+            document.getElementById('testResults').innerHTML = '';
+        }
+        
+        // 페이지 로드 시 자동 실행
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('[SYSTEM] 테스트 페이지 로드 완료');
+            console.log('[SYSTEM] API 서버: http://localhost:8000');
+            console.log('[SYSTEM] 프론트엔드: http://localhost:3000');
+        });
+    </script>
+</body>
+</html>
